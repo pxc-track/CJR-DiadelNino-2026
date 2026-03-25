@@ -436,6 +436,7 @@ const FORM_ENTRIES = {
   material:   'entry.881942882',
   comentarios:'entry.614580564',
   recibieron: 'entry.1959855763',
+  fotos:      'entry.333752448',
 };
 
 // -- CONFIRMADOS desde Google Sheets --
@@ -685,6 +686,7 @@ function submitToGoogleForms(data) {
     [FORM_ENTRIES.material]:   data.material,
     [FORM_ENTRIES.comentarios]:data.comentarios,
     [FORM_ENTRIES.recibieron]: data.recibieron,
+    [FORM_ENTRIES.fotos]:      data.fotos || '',
   });
   const iframe = document.createElement('iframe');
   iframe.style.display = 'none';
@@ -745,7 +747,8 @@ function resetForm() {
 // 2. Pega tu API key en IMGBB_API_KEY abajo.
 // 3. Las URLs de las fotos se registrarán en el folio de éxito.
 // ================================================================
-const IMGBB_API_KEY = 'f54a9d1e0b3d89a607d638dc66ff47d7'; // ← reemplaza con tu key
+const IMGBB_API_KEY  = 'f54a9d1e0b3d89a607d638dc66ff47d7'; // ← tu API key de imgbb.com
+const IMGBB_ALBUM_ID = 'zn9MbS';                              // ← ID de tu álbum (ibb.co/album/zn9MbS)
 
 let uploadedPhotos = []; // { file, dataUrl, imgbbUrl }
 let currentFolio   = null;
@@ -791,16 +794,23 @@ function removePhoto(idx) {
 }
 
 async function uploadToImgbb(dataUrl) {
-  if (!IMGBB_API_KEY || IMGBB_API_KEY === 'f54a9d1e0b3d89a607d638dc66ff47d7') return null;
+  if (!IMGBB_API_KEY || IMGBB_API_KEY === 'TU_IMGBB_API_KEY') return null;
   try {
     const base64 = dataUrl.split(',')[1];
     const fd = new FormData();
     fd.append('image', base64);
     fd.append('key', IMGBB_API_KEY);
+    fd.append('album', IMGBB_ALBUM_ID);   // ← las fotos irán directo a tu álbum
     const res  = await fetch('https://api.imgbb.com/1/upload', { method: 'POST', body: fd });
     const json = await res.json();
-    return json.success ? json.data.url : null;
+    if (json.success) {
+      return json.data.url;
+    } else {
+      console.warn('ImgBB error:', json.error);
+      return null;
+    }
   } catch (e) {
+    console.warn('ImgBB upload failed:', e);
     return null;
   }
 }
@@ -808,32 +818,69 @@ async function uploadToImgbb(dataUrl) {
 async function submitPhotosAndFinish() {
   const btn = document.getElementById('btn5');
   btn.disabled = true;
-  btn.textContent = '⏳ Subiendo fotos...';
 
+  // Upload each photo and show live progress per thumbnail
   const urls = [];
-  for (const p of uploadedPhotos) {
+  for (let i = 0; i < uploadedPhotos.length; i++) {
+    const p = uploadedPhotos[i];
+    const thumb = document.getElementById(`thumb-${i}`);
+    if (thumb) thumb.style.opacity = '0.5';
+    btn.textContent = `⏳ Subiendo foto ${i+1} de ${uploadedPhotos.length}...`;
+
     const url = await uploadToImgbb(p.dataUrl);
-    urls.push(url || '(pendiente)');
+    urls.push(url || null);
     p.imgbbUrl = url;
+
+    if (thumb) {
+      thumb.style.opacity = '1';
+      // Add a small checkmark overlay on success
+      const ok = document.createElement('span');
+      ok.textContent = url ? '✅' : '⚠️';
+      ok.style.cssText = 'position:absolute;bottom:4px;right:6px;font-size:14px;';
+      thumb.appendChild(ok);
+    }
   }
 
-  // Append photo URLs to success ref
-  if (urls.length > 0) {
-    const photoLine = '📸 Fotos: ' + urls.map((u,i) => u !== '(pendiente)' ? `<a href="${u}" target="_blank" style="color:#00785a;">Ver foto ${i+1}</a>` : `Foto ${i+1} (pendiente)`).join(' · ');
-    const ref = document.getElementById('success-ref');
-    if (ref) ref.innerHTML += '<br>' + photoLine;
+  // Build URL list string for Google Forms
+  const validUrls  = urls.filter(Boolean);
+  const fotosStr   = validUrls.length > 0 ? validUrls.join(' | ') : 'Sin fotos subidas';
 
-    // Show photo thumbnails on success screen
-    const wrap = document.getElementById('success-photos');
-    const grid = document.getElementById('success-photo-grid');
-    if (wrap && grid) {
-      grid.innerHTML = uploadedPhotos.map((p, i) => `
-        <div class="photo-thumb">
-          <img src="${p.dataUrl}" alt="Foto ${i+1}">
-          <span class="ph-num">${i+1}</span>
-        </div>`).join('');
-      wrap.style.display = 'block';
-    }
+  // Send photo URLs to Google Forms (second submission with same folio)
+  if (currentFolio) {
+    submitToGoogleForms({
+      tienda:      selectedTienda,
+      gerente:     document.getElementById('gerente-nombre').value.trim(),
+      telefono:    document.getElementById('gerente-tel').value.trim(),
+      pickup:      getPickup(selectedTienda).name,
+      folio:       currentFolio + ' (fotos)',
+      material:    '',
+      comentarios: '',
+      recibieron:  '',
+      fotos:       fotosStr,
+    });
+  }
+
+  // Update success screen
+  const ref = document.getElementById('success-ref');
+  if (ref && validUrls.length > 0) {
+    const links = validUrls.map((u, i) =>
+      `<a href="${u}" target="_blank" style="color:#00785a;text-decoration:underline;">📷 Foto ${i+1}</a>`
+    ).join('  ');
+    ref.innerHTML += `<br>📸 Evidencia: ${links}`;
+  }
+
+  // Show thumbnails on success page
+  const wrap = document.getElementById('success-photos');
+  const sgrid = document.getElementById('success-photo-grid');
+  if (wrap && sgrid && uploadedPhotos.length > 0) {
+    sgrid.innerHTML = uploadedPhotos.map((p, i) => `
+      <div class="photo-thumb">
+        ${p.imgbbUrl
+          ? `<a href="${p.imgbbUrl}" target="_blank"><img src="${p.dataUrl}" alt="Foto ${i+1}"></a>`
+          : `<img src="${p.dataUrl}" alt="Foto ${i+1}">`}
+        <span class="ph-num">${i+1}</span>
+      </div>`).join('');
+    wrap.style.display = 'block';
   }
 
   btn.disabled = false;
