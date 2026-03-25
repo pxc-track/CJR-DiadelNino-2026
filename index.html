@@ -675,7 +675,7 @@ function updateSteps(current) {
 }
 
 function submitToGoogleForms(data) {
-  if (FORM_ID === 'TU_FORM_ID_AQUI') return;
+  if (FORM_ID === '1H-tvUkfJKhfLrmSJ6on5hhB3dsYkwPUE12Ue8CL-UJ0') return;
   const base = `https://docs.google.com/forms/d/${FORM_ID}/formResponse`;
   const params = new URLSearchParams({
     [FORM_ENTRIES.tienda]:     data.tienda,
@@ -794,7 +794,7 @@ function removePhoto(idx) {
 }
 
 async function uploadToImgbb(dataUrl) {
-  if (!IMGBB_API_KEY || IMGBB_API_KEY === 'TU_IMGBB_API_KEY') return null;
+  if (!IMGBB_API_KEY || IMGBB_API_KEY === 'f54a9d1e0b3d89a607d638dc66ff47d7') return null;
   try {
     const base64 = dataUrl.split(',')[1];
     const fd = new FormData();
