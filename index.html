@@ -452,7 +452,7 @@ let _sheetPolling = null;
 
 async function fetchConfirmadosFromSheet() {
   try {
-    const url = `https://docs.google.com/spreadsheets/d/1bat_Zp4m6elwkpYKi6jGRlpOM6rPLW_4sED34yLlYiU/gviz/tq?tqx=out:json&gid=1877599478`;
+    const url = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json&gid=1877599478`;
     const res  = await fetch(url);
     if (!res.ok) throw new Error('Sheet no accesible');
     const text = await res.text();
