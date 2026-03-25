@@ -426,7 +426,7 @@ const LABELS = {
 // ===============================================================
 // INTEGRACION GOOGLE FORMS
 // ===============================================================
-const FORM_ID = '1H-tvUkfJKhfLrmSJ6on5hhB3dsYkwPUE12Ue8CL-UJ0';
+const FORM_ID = '1FAIpQLSdTND1kkthiIBiWfBWihFl1tOFtxUPuwBMmtXhXneQfvAdAaw';
 const FORM_ENTRIES = {
   tienda:     'entry.771329958',
   gerente:    'entry.1279000791',
@@ -675,7 +675,7 @@ function updateSteps(current) {
 }
 
 function submitToGoogleForms(data) {
-  if (FORM_ID === '1H-tvUkfJKhfLrmSJ6on5hhB3dsYkwPUE12Ue8CL-UJ0') return;
+  if (FORM_ID === '1FAIpQLSdTND1kkthiIBiWfBWihFl1tOFtxUPuwBMmtXhXneQfvAdAaw') return;
   const base = `https://docs.google.com/forms/d/${FORM_ID}/formResponse`;
   const params = new URLSearchParams({
     [FORM_ENTRIES.tienda]:     data.tienda,
